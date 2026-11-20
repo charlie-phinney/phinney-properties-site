@@ -259,7 +259,22 @@ jobs:
     needs: [build, deploy, verify-tinacloud-index]
     if: failure()
     runs-on: ubuntu-latest
+    permissions:
+      issues: write
     steps:
+      # Needs no secret: GitHub itself emails the repo owner when an issue is
+      # assigned to them, so a red deploy reaches a person even with the
+      # Resend secrets below unset.
+      - name: Open an issue assigned to the repo owner
+        env:
+          GH_TOKEN: ${{ github.token }}
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
+        run: |
+          url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          gh issue create -R "${{ github.repository }}" \
+            --assignee "${{ github.repository_owner }}" \
+            --title "Deploy FAILED on ${{ github.ref_name }}" \
+            --body "$(printf 'A deploy run failed.\n\nCommit: %s\nRun: %s\n\nSaves from /admin are NOT live until a deploy is green.' "$COMMIT_MSG" "$url")"
       - name: Email the site owner
         env:
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
