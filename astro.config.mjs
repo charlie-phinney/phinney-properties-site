@@ -5,5 +5,7 @@ import tailwind from '@astrojs/tailwind';
 // Live at the custom domain phinneyproperties.com (GitHub Pages + public/CNAME).
 export default defineConfig({
   site: 'https://phinneyproperties.com',
+  // Only set while the site is served from the temporary GitHub address.
+  base: process.env.SITE_BASE || '/',
   integrations: [tailwind()],
 });
