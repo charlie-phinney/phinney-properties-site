@@ -14,7 +14,7 @@
     },
     {
       "id": "homes",
-      "show": true
+      "show": false
     },
     {
       "id": "services",
