@@ -14,7 +14,7 @@ Website for Phinney Properties (phinneyproperties.com): residential property man
 
 ## Brand Personality
 
-Steady, neighborly, exact. One local person who picks up the phone, not a corporate portal.
+Steady, neighborly, exact. One local person, not a corporate portal.
 
 ## Anti-references
 
@@ -25,6 +25,7 @@ Steady, neighborly, exact. One local person who picks up the phone, not a corpor
 ## Design Principles
 
 1. Trust through plainness: short true statements, no inflated numbers or badges.
+   Every line on the page is Nancy's own words, a verified fact, or a plain standard label. Nothing is written on her behalf without a source (owner ruling 11/20). A list of her homes shows all of them or none.
 2. Editor-proof: every section survives blank fields, odd pastes and reordering.
 3. One page, orderable: sections can be hidden or moved; each stands alone at any width.
 4. Her homes are the imagery: real photos of her properties, never stock people.
