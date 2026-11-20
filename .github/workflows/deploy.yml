@@ -195,6 +195,8 @@ jobs:
         if: env.HAS_TINA == 'true'
         run: node scripts/inject-admin-autorefresh.mjs
       - name: Build site
+        env:
+          SITE_BASE: ${{ vars.SITE_BASE }}
         run: npx astro build
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

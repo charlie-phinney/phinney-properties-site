@@ -1,4 +1,5 @@
 ---
+import { u } from '../data/url';
 import { site, navLinks, sections } from '../data/site';
 const hasContact = sections.includes('contact');
 ---
@@ -9,12 +10,12 @@ const hasContact = sections.includes('contact');
   style="z-index: var(--z-sticky)"
 >
   <div class="wrap flex h-16 items-center justify-between gap-6">
-    <a href="/" class="inline-flex min-h-12 items-center font-serif text-xl leading-none text-ink sm:text-[1.375rem]">{site.brand}</a>
+    <a href={u('/')} class="inline-flex min-h-12 items-center font-serif text-xl leading-none text-ink sm:text-[1.375rem]">{site.brand}</a>
 
     <nav aria-label="Main" class="hidden items-center gap-8 md:flex">
       {
         navLinks.map((l) => (
-          <a href={l.href} class="text-[0.9375rem] font-medium text-muted transition-colors duration-200 hover:text-ink">
+          <a href={u(l.href)} class="text-[0.9375rem] font-medium text-muted transition-colors duration-200 hover:text-ink">
             {l.label}
           </a>
         ))
@@ -47,7 +48,7 @@ const hasContact = sections.includes('contact');
     <div class="wrap flex flex-col py-3">
       {
         navLinks.map((l) => (
-          <a href={l.href} class="flex min-h-12 items-center text-lg font-medium text-ink">
+          <a href={u(l.href)} class="flex min-h-12 items-center text-lg font-medium text-ink">
             {l.label}
           </a>
         ))
