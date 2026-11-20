@@ -44,7 +44,7 @@ const homes = (Array.isArray(d.homes) ? d.homes : [])
 
 const content = {
   brand: str(d.brand, 'Phinney Properties'),
-  heroHeadline: str(d.heroHeadline, 'Property management that feels personal.'),
+  heroHeadline: str(d.heroHeadline, 'Property management'),
   heroSub: str(d.heroSub),
   heroButton: str(d.heroButton, 'Get in touch'),
   heroImage: img(d.heroImage),
