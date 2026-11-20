@@ -1,0 +1,91 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Phinney Properties: design tokens. Colors are OKLCH bare channels so
+   opacity utilities compile; the active "Look & Feel" palette overrides
+   these inline on <html> (src/data/theme.ts, Base.astro). */
+:root {
+  --bg: 1 0 0;
+  --surface: 0.967 0.008 150;
+  --ink: 0.21 0.022 152;
+  --muted: 0.43 0.022 152;
+  --primary: 0.40 0.085 150;
+  --primary-deep: 0.255 0.05 152;
+  --primary-tint: 0.94 0.028 150;
+  --pop: 0.76 0.115 58;
+  --pop-deep: 0.52 0.115 50;
+  --line: 0.90 0.008 150;
+
+  --font-serif: 'Young Serif', Georgia, serif;
+  --font-sans: 'Hanken Grotesk', system-ui, -apple-system, sans-serif;
+
+  /* semantic z-scale */
+  --z-sticky: 30;
+  --z-menu: 40;
+}
+
+@layer base {
+  html { scroll-padding-top: 5rem; }
+  /* Smooth scrolling arms on first interaction (class set in Base.astro) so
+     a reload snaps back to position instead of gliding. */
+  html.smooth { scroll-behavior: smooth; }
+  body {
+    background-color: oklch(var(--bg));
+    color: oklch(var(--ink));
+    font-family: theme('fontFamily.sans');
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  h1, h2, h3 {
+    font-family: theme('fontFamily.serif');
+    text-wrap: balance;
+    letter-spacing: -0.02em;
+  }
+  p { text-wrap: pretty; }
+  ::selection { background: oklch(var(--pop)); color: oklch(var(--ink)); }
+  :focus-visible {
+    outline: 2px solid oklch(var(--primary));
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+  .on-deep :focus-visible { outline-color: oklch(var(--pop)); }
+}
+
+@layer components {
+  .wrap { @apply mx-auto w-full max-w-6xl px-5 sm:px-8; }
+  .btn {
+    @apply inline-flex min-h-12 items-center justify-center rounded-full px-6 text-base font-semibold transition-colors duration-200 ease-out-expo;
+  }
+  .btn-primary { @apply bg-primary text-bg hover:bg-primary-deep active:bg-primary-deep; }
+  .btn-light { @apply bg-bg text-ink hover:bg-primary-tint active:bg-primary-tint; }
+  .btn-ghost { @apply text-bg underline decoration-pop decoration-2 underline-offset-8 hover:decoration-bg; }
+  .field {
+    @apply block min-h-12 w-full rounded-lg border border-line bg-bg px-4 py-3 text-base text-ink transition-colors duration-200 placeholder:text-muted hover:border-muted focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25;
+  }
+}
+
+/* Scroll reveals. Content is visible by default; the inline script in
+   index.astro opts in (html.reveal-ready) only when IntersectionObserver
+   exists, so a hidden tab, a crawler or a script failure never ships a
+   blank section. */
+html.reveal-ready .reveal {
+  opacity: 0;
+  transform: translateY(14px);
+  transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1), transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+  transition-delay: calc(var(--i, 0) * 80ms);
+}
+html.reveal-ready .reveal.in { opacity: 1; transform: none; }
+
+/* Hero: the photo settles in once on load. */
+@keyframes hero-settle { from { transform: scale(1.06); } to { transform: scale(1); } }
+.hero-photo { animation: hero-settle 1.6s cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  html.smooth { scroll-behavior: auto; }
+  html.reveal-ready .reveal { opacity: 1; transform: none; transition: none; }
+  .hero-photo { animation: none; }
+  *, *::before, *::after { transition-duration: 0.001ms !important; }
+}
+
+.field[aria-invalid='true'] { border-color: oklch(var(--pop-deep)); }

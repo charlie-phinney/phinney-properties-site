@@ -1,0 +1,277 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      # the Tina admin build can exceed the default ~2GB Node heap
+      NODE_OPTIONS: --max-old-space-size=6144
+      # The editor (/admin) is built only once its TinaCloud keys exist, so
+      # the site itself can go live first.
+      HAS_TINA: ${{ secrets.TINA_TOKEN != '' }}
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      # If TinaCloud is unreachable or the schema is broken, FAIL the deploy.
+      # A red run + email beats silently shipping a site with no /admin
+      # (which is what continue-on-error used to do — the editor would hit a 404
+      # and nobody was told).
+      - name: Build CMS admin
+        if: env.HAS_TINA == 'true'
+        env:
+          TINA_PUBLIC_CLIENT_ID: ${{ secrets.TINA_PUBLIC_CLIENT_ID }}
+          TINA_TOKEN: ${{ secrets.TINA_TOKEN }}
+        run: npx @tinacms/cli build --skip-cloud-checks
+      # TinaCloud indexes the schema from the COMMITTED tina-lock.json, but
+      # only `tinacms dev` writes that file — `tinacms build` refreshes
+      # tina/__generated__ and stops there. Assemble the lock exactly the way
+      # the CLI does so a schema change can never land without its lock.
+      - name: Regenerate tina-lock.json from the built schema
+        if: env.HAS_TINA == 'true'
+        run: |
+          node -e "
+            const fs = require('fs');
+            const rd = (f) => JSON.parse(fs.readFileSync('tina/__generated__/_' + f + '.json'));
+            fs.writeFileSync('tina/tina-lock.json', JSON.stringify({ schema: rd('schema'), lookup: rd('lookup'), graphql: rd('graphql') }));
+          "
+      # the editor uploads photos straight from her phone/camera; nothing else
+      # limits their size. Downsize anything big in place (same filename, so
+      # content references never break) and strip EXIF — her camera photos
+      # carry GPS coordinates.
+      # iPhones upload HEIC when the picker's accept list is bypassed (the editor
+      # did on 9/24). Chrome/Firefox cannot render HEIC, so convert to JPG and
+      # repoint every content reference. Idempotent: an existing JPG is kept,
+      # the HEIC is left in place so a stale /admin tab re-saving the old path
+      # just gets rewritten again on the next deploy.
+      - name: Convert HEIC uploads to JPG
+        run: |
+          shopt -s nullglob nocaseglob globstar
+          heics=(public/images/**/*.heic public/images/**/*.heif)
+          [ ${#heics[@]} -gt 0 ] || { echo "No HEIC uploads."; exit 0; }
+          sudo apt-get update -q
+          sudo apt-get install -y -q libheif-examples imagemagick
+          for f in "${heics[@]}"; do
+            out="${f%.*}.jpg"
+            if [ ! -f "$out" ]; then
+              # iPhone portrait HEICs carry a depth map noble's libheif rejects
+              # ("Non-existing depth image referenced"). Try both decoders;
+              # a photo that still won't convert must NOT block the deploy.
+              if heif-convert -q 90 "$f" "$out" 2>/dev/null || convert "$f[0]" -quality 90 "$out" 2>/dev/null; then
+                mogrify -auto-orient -strip "$out"
+                echo "converted: $f -> $out"
+              else
+                rm -f "$out"
+                echo "::warning::Could not convert $f (convert it on a Mac with sips and commit the JPG)"
+                continue
+              fi
+            fi
+            rel="${f#public}"; relout="${out#public}"
+            # replace the reference in every content file, exact path match
+            grep -rl --fixed-strings "$rel" src/data/*.json 2>/dev/null | while read -r c; do
+              python3 - "$c" "$rel" "$relout" <<'EOF'
+          import sys
+          c,a,b=sys.argv[1:]
+          t=open(c).read(); n=t.replace(a,b)
+          if n!=t: open(c,'w').write(n); print(f"repointed {a} -> {b} in {c}")
+          EOF
+            done
+          done
+      - name: Optimize oversized images
+        run: |
+          # ubuntu-24.04 runners no longer preinstall ImageMagick. The runner
+          # image ships a STALE apt index: installing without `update` first
+          # 404s on ghostscript (broke every deploy 9/23-9/24). Always refresh.
+          sudo apt-get update -q
+          command -v mogrify >/dev/null || sudo apt-get install -y -q imagemagick
+          command -v pngquant >/dev/null || sudo apt-get install -y -q pngquant
+          # ** recurses into reels/ and profiles/ — the daily refresh writes
+          # tall (1080x1920) files there that a width-only pass never touched.
+          shopt -s nullglob nocaseglob globstar
+          for f in public/images/**/*.jpg public/images/**/*.jpeg public/images/**/*.png; do
+            before=$(stat -c%s "$f")
+            if [ "$before" -gt 614400 ]; then
+              cp "$f" /tmp/orig-img
+              mogrify -auto-orient -strip -resize '1600x1600>' -quality 82 "$f"
+              # Photographic PNGs barely shrink under ImageMagick (a macOS
+              # screenshot once GREW 1.8MB -> 2.7MB); pngquant's palette pass
+              # takes them down 60-75% with no visible loss at these sizes.
+              case "$f" in
+                *.png|*.PNG) pngquant --force --skip-if-larger --quality 55-90 --strip --output "$f" -- "$f" || true ;;
+              esac
+              after=$(stat -c%s "$f")
+              # keep the smaller file, whatever the encoders did
+              if [ "$after" -ge "$before" ]; then
+                cp /tmp/orig-img "$f"
+                echo "kept original (recompression grew it): $f"
+              else
+                echo "optimized: $f ($before -> $after bytes)"
+              fi
+            fi
+          done
+      # Modern-format variants for the photos the pages actually render
+      # (top-level public/images — reels/ and profiles/ thumbnails are
+      # already small). Media.astro picks these up as a <picture> srcset;
+      # until they exist it just renders the original, so this can never
+      # break a page. Regenerated when the source photo is newer.
+      - name: Generate webp variants
+        run: |
+          shopt -s nullglob nocaseglob
+          for f in public/images/*.jpg public/images/*.jpeg public/images/*.png; do
+            base="${f%.*}"
+            w=$(identify -format '%w' "$f")
+            for target in 800 1600; do
+              [ "$w" -ge "$target" ] || continue
+              v="${base}-${target}.webp"
+              if [ ! -f "$v" ] || [ "$f" -nt "$v" ]; then
+                convert "$f" -auto-orient -strip -resize "${target}x>" -quality 82 "$v"
+                echo "webp: $v ($(stat -c%s "$v") bytes)"
+              fi
+            done
+          done
+          # prune variants whose source photo is gone. NOT `ls a b c || rm`:
+          # ls exits non-zero when ANY listed name is missing, which pruned
+          # every variant the moment one extension candidate didn't exist.
+          for v in public/images/*-800.webp public/images/*-1600.webp; do
+            base="${v%-*.webp}"
+            found=""
+            for ext in jpg jpeg png JPG JPEG PNG; do
+              [ -f "${base}.${ext}" ] && { found=1; break; }
+            done
+            [ -n "$found" ] || { rm "$v"; echo "pruned: $v"; }
+          done
+      # Self-hosted fonts for the active pairing (scripts/vendor-fonts.mjs).
+      # Keep-last-good: a fetch failure keeps the committed files and never
+      # fails the deploy.
+      - name: Vendor fonts
+        run: node scripts/vendor-fonts.mjs
+      - name: Commit housekeeping changes (lock + optimized images + fonts)
+        run: |
+          git add public/images public/fonts src/data/site.json
+          [ -f tina/tina-lock.json ] && git add tina/tina-lock.json
+          if git diff --staged --quiet; then
+            echo "Nothing to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "chore: sync tina-lock.json + optimize images + convert HEIC [skip ci]"
+          # the editor saves to main constantly; retry around her commits instead
+          # of silently dropping ours (a dropped lock = the stale-index bug).
+          for i in 1 2 3; do
+            git pull --rebase origin main && git push && exit 0
+            git rebase --abort 2>/dev/null || true
+            sleep 5
+          done
+          echo "::error::Could not push the regenerated tina-lock.json after 3 attempts — TinaCloud will serve a stale schema until this lands. Re-run this workflow."
+          exit 1
+      # Her /admin tab lives for days and goes stale after every deploy.
+      # Stamp the deploy SHA into the page + a deploy-version.json next to it
+      # so an open tab can spot a newer deploy and refresh itself when safe
+      # (details in the script).
+      - name: Inject admin auto-refresh
+        if: env.HAS_TINA == 'true'
+        run: node scripts/inject-admin-autorefresh.mjs
+      - name: Build site
+        run: npx astro build
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+  # The failure class that broke the editor's saves twice (2026-06-30 and
+  # 2026-07-01): the repo's schema and TinaCloud's *served* index drift apart,
+  # every save errors with "$params got invalid value", and nothing goes red.
+  # This job makes that drift loud: it asks TinaCloud's content API for the
+  # schema it is actually serving and fails if any field from the committed
+  # schema is missing. Fix when red: app.tina.io → Phinney Properties →
+  # Configuration → Branches → main → ⋮ → Reindex.
+  verify-tinacloud-index:
+    needs: build
+    runs-on: ubuntu-latest
+    env:
+      HAS_TINA: ${{ secrets.TINA_TOKEN != '' }}
+    steps:
+      - name: Checkout
+        if: env.HAS_TINA == 'true'
+        uses: actions/checkout@v4
+      - name: Setup Node
+        if: env.HAS_TINA == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Install dependencies
+        if: env.HAS_TINA == 'true'
+        run: npm ci
+      - name: Rebuild schema for comparison
+        if: env.HAS_TINA == 'true'
+        env:
+          TINA_PUBLIC_CLIENT_ID: ${{ secrets.TINA_PUBLIC_CLIENT_ID }}
+          TINA_TOKEN: ${{ secrets.TINA_TOKEN }}
+        run: npx @tinacms/cli build --skip-cloud-checks
+      - name: Check served schema matches the repo
+        if: env.HAS_TINA == 'true'
+        env:
+          TINA_PUBLIC_CLIENT_ID: ${{ secrets.TINA_PUBLIC_CLIENT_ID }}
+          TINA_TOKEN: ${{ secrets.TINA_TOKEN }}
+        run: node scripts/check-tina-index.mjs
+
+  # A red deploy used to reach nobody: bot-authored pushes get no GitHub
+  # failure email, so 9/23-9/24 sat broken for 27h until the editor noticed.
+  # Email is the channel Charlie actually reads.
+  notify-failure:
+    needs: [build, deploy, verify-tinacloud-index]
+    if: failure()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Email the site owner
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          ALERT_EMAIL_TO: ${{ secrets.ALERT_EMAIL_TO }}
+          ALERT_EMAIL_FROM: ${{ secrets.ALERT_EMAIL_FROM }}
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
+        run: |
+          [ -n "$RESEND_API_KEY" ] && [ -n "$ALERT_EMAIL_TO" ] && [ -n "$ALERT_EMAIL_FROM" ] || { echo "alert email secrets not set; skipping email"; exit 0; }
+          url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          payload=$(python3 -c 'import json,sys; print(json.dumps({
+            "from": "phinneyproperties.com deploy <" + sys.argv[4] + ">",
+            "to": [sys.argv[3]],
+            "subject": "[phinneyproperties.com] deploy FAILED: " + sys.argv[2],
+            "text": "Deploy run failed on main.\n\nCommit: " + sys.argv[2] + "\nRun: " + sys.argv[1] + "\n\nSaves from /admin are NOT live until this is green."}))' "$url" "$COMMIT_MSG" "$ALERT_EMAIL_TO" "$ALERT_EMAIL_FROM")
+          curl -sS -o /dev/null -w "resend %{http_code}\n" https://api.resend.com/emails \
+            -H "Authorization: Bearer $RESEND_API_KEY" -H "Content-Type: application/json" \
+            -A "phinney-properties-site-ci" --data "$payload"

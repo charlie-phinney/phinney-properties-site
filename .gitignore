@@ -1,0 +1,28 @@
+# build output
+dist/
+.output/
+
+# dependencies
+node_modules/
+
+# astro
+.astro/
+
+# tinacms build artifacts (generated in CI)
+tina/__generated__/
+public/admin/
+
+# environment (none needed for this static site)
+.env
+.env.production
+
+# logs & os
+npm-debug.log*
+.DS_Store
+
+# editor
+.vscode/
+.idea/
+
+# session handoffs stay out of the repo
+.cc-handoff*.md

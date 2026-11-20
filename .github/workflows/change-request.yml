@@ -1,0 +1,48 @@
+name: Site change request
+
+# When Nancy types something into the "Ask for a change" box in /admin and
+# saves, TinaCMS commits it to src/data/site.json. This turns that into a
+# GitHub issue so the request reaches Charlie automatically — no email needed.
+# Only fires when the request text actually changes to something non-empty.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/data/site.json'
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  open-request:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: File an issue if there's a new change request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BEFORE: ${{ github.event.before }}
+        run: |
+          cur=$(jq -r '.changeRequest // ""' src/data/site.json)
+          # Compare against the push's true "before" commit, not HEAD~1 — a
+          # multi-commit push (Tina batch, CI rebase) hides the change at
+          # HEAD~1 and the request silently never reaches Charlie.
+          if [[ "$BEFORE" =~ ^[0-9a-f]{40}$ ]] && git cat-file -e "$BEFORE" 2>/dev/null; then
+            base="$BEFORE"
+          else
+            base="HEAD~1"
+          fi
+          prev=$(git show "$base":src/data/site.json 2>/dev/null | jq -r '.changeRequest // ""' || echo "")
+          if [ -z "$cur" ] || [ "$cur" = "$prev" ]; then
+            echo "No new change request — nothing to file."
+            exit 0
+          fi
+          short=$(printf '%s' "$cur" | head -c 60 | tr '\n' ' ')
+          body=$(printf 'Nancy asked for this from the site editor (/admin):\n\n> %s\n\n_Auto-filed from `src/data/site.json` → `changeRequest`. Handle it, then clear the box in /admin so the next one comes through clean._' "$cur")
+          gh label create site-request --color FBBF24 --description "Change request from the site editor" 2>/dev/null || true
+          gh issue create --title "✨ Site change request: $short" --body "$body" --label site-request
+          echo "Filed issue for: $short"

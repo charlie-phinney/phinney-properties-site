@@ -1,0 +1,11 @@
+---
+import { site } from '../data/site';
+const year = new Date().getFullYear();
+---
+
+<footer class="on-deep bg-primary-deep text-bg">
+  <div class="wrap flex flex-col gap-3 py-10 sm:flex-row sm:items-baseline sm:justify-between">
+    <p class="font-serif text-xl">{site.brand}</p>
+    <p class="text-sm text-bg/80">© {year} {site.brand}. Twin Cities, Minnesota.</p>
+  </div>
+</footer>

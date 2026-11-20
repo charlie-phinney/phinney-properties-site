@@ -1,0 +1,36 @@
+# Deploy drift guard: if the live site lags main, re-fire the deploy. No-ops
+# once caught up. Born as a 20-min self-heal for the 2026-07-02 GitHub Pages
+# outage; that outage is long over, so it now runs once a day (shortly after
+# the daily refresh-stats deploy, when drift is most likely) instead of 72x.
+# Use workflow_dispatch for an on-demand check.
+name: Deploy drift guard
+
+on:
+  schedule:
+    - cron: "40 15 * * *"
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  retry:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fire deploy if live site is behind main
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          live=$(curl -sf "https://phinneyproperties.com/admin/deploy-version.json?cb=$(date +%s)" | python3 -c "import sys,json;print(json.load(sys.stdin)['sha'])" || echo unknown)
+          echo "live=$live main=$GITHUB_SHA"
+          if [ "$live" = "$GITHUB_SHA" ]; then
+            echo "Live site matches main — nothing to do."
+            exit 0
+          fi
+          if gh api repos/${{ github.repository }}/actions/workflows/deploy.yml/runs --jq '.workflow_runs[0].status' | grep -qE 'queued|in_progress'; then
+            echo "A deploy is already running — letting it finish."
+            exit 0
+          fi
+          gh workflow run deploy.yml --ref main -R "${{ github.repository }}"
+          echo "Deploy dispatched."

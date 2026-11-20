@@ -1,0 +1,79 @@
+---
+import { site, navLinks, sections } from '../data/site';
+const hasContact = sections.includes('contact');
+---
+
+<header
+  id="site-nav"
+  class="sticky top-0 border-b border-transparent bg-bg/90 backdrop-blur transition-colors duration-300"
+  style="z-index: var(--z-sticky)"
+>
+  <div class="wrap flex h-16 items-center justify-between gap-6">
+    <a href="/" class="inline-flex min-h-12 items-center font-serif text-xl leading-none text-ink sm:text-[1.375rem]">{site.brand}</a>
+
+    <nav aria-label="Main" class="hidden items-center gap-8 md:flex">
+      {
+        navLinks.map((l) => (
+          <a href={l.href} class="text-[0.9375rem] font-medium text-muted transition-colors duration-200 hover:text-ink">
+            {l.label}
+          </a>
+        ))
+      }
+      {hasContact && <a href="#contact" class="btn btn-primary min-h-10 px-5 text-[0.9375rem]">{site.heroButton}</a>}
+    </nav>
+
+    <button
+      id="menu-toggle"
+      type="button"
+      class="-mr-2 inline-flex h-12 w-12 items-center justify-center rounded-full text-ink md:hidden"
+      aria-expanded="false"
+      aria-controls="mobile-menu"
+      aria-label="Menu"
+    >
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true">
+        <path class="menu-open" d="M4 8h16M4 16h16"></path>
+        <path class="menu-close hidden" d="M6 6l12 12M18 6L6 18"></path>
+      </svg>
+    </button>
+  </div>
+
+  <nav
+    id="mobile-menu"
+    aria-label="Main"
+    hidden
+    class="border-t border-line bg-bg md:hidden"
+    style="z-index: var(--z-menu)"
+  >
+    <div class="wrap flex flex-col py-3">
+      {
+        navLinks.map((l) => (
+          <a href={l.href} class="flex min-h-12 items-center text-lg font-medium text-ink">
+            {l.label}
+          </a>
+        ))
+      }
+      {hasContact && <a href="#contact" class="btn btn-primary mt-3 mb-2">{site.heroButton}</a>}
+    </div>
+  </nav>
+</header>
+
+<script is:inline>
+  (function () {
+    var nav = document.getElementById('site-nav');
+    var btn = document.getElementById('menu-toggle');
+    var menu = document.getElementById('mobile-menu');
+    if (!nav || !btn || !menu) return;
+    var setOpen = function (open) {
+      menu.hidden = !open;
+      btn.setAttribute('aria-expanded', String(open));
+      btn.querySelector('.menu-open').classList.toggle('hidden', open);
+      btn.querySelector('.menu-close').classList.toggle('hidden', !open);
+    };
+    btn.addEventListener('click', function () { setOpen(menu.hidden); });
+    menu.addEventListener('click', function (e) { if (e.target.closest('a')) setOpen(false); });
+    addEventListener('keydown', function (e) { if (e.key === 'Escape' && !menu.hidden) { setOpen(false); btn.focus(); } });
+    var onScroll = function () { nav.classList.toggle('border-line', scrollY > 8); nav.classList.toggle('border-transparent', scrollY <= 8); };
+    addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+  })();
+</script>

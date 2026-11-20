@@ -1,0 +1,103 @@
+---
+import fs from 'node:fs';
+import '../styles/global.css';
+import { site } from '../data/site';
+import { theme } from '../data/theme';
+import { googleCssUrl } from '../data/font-pairings.mjs';
+
+interface Props {
+  title?: string;
+  description?: string;
+  noindex?: boolean;
+}
+const {
+  title = `${site.brand} · Property management in the Twin Cities`,
+  description = site.heroSub,
+  noindex = false,
+} = Astro.props;
+
+const canonical = new URL(Astro.url.pathname, Astro.site);
+const ogImage = new URL('/og.png', Astro.site).href;
+
+// "Look & Feel" picks from /admin, applied as inline custom properties so
+// they always win over the global.css defaults.
+const themeVars = [
+  ...Object.entries(theme.colors).map(([role, value]) => `--${role}:${value}`),
+  `--font-serif:${theme.fonts.serif}`,
+  `--font-sans:${theme.fonts.sans}`,
+  `font-size:${theme.rootPercent}%`,
+].join(';');
+
+// Fonts are self-hosted (scripts/vendor-fonts.mjs fills public/fonts in CI).
+// Until the files exist for a newly picked pairing, fall back to the CDN
+// for that one build.
+const vendoredCss = fs.existsSync('public/fonts/fonts.css')
+  ? fs.readFileSync('public/fonts/fonts.css', 'utf8')
+  : '';
+const families = [theme.fonts.serif, theme.fonts.sans].map((s) => /'([^']+)'/.exec(s)?.[1] || '');
+const vendoredFresh = families.every((f) => f && vendoredCss.includes(`font-family: '${f}'`));
+const fontsHref = googleCssUrl(theme.fonts);
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'LocalBusiness',
+  name: site.brand,
+  description: site.heroSub,
+  url: Astro.site?.href,
+  areaServed: 'Minneapolis-Saint Paul, Minnesota',
+};
+---
+
+<!doctype html>
+<html lang="en" style={themeVars}>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    {noindex && <meta name="robots" content="noindex" />}
+    <link rel="canonical" href={canonical} />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:site_name" content={site.brand} />
+    <meta property="og:image" content={ogImage} />
+    <meta name="twitter:card" content="summary_large_image" />
+    {
+      vendoredFresh ? (
+        <style set:html={vendoredCss} />
+      ) : (
+        <>
+          <link rel="preconnect" href="https://fonts.googleapis.com" />
+          <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+          <link rel="stylesheet" href={fontsHref} />
+        </>
+      )
+    }
+    <script type="application/ld+json" set:html={JSON.stringify(jsonLd).replace(/</g, '\\u003c')} />
+  </head>
+  <body>
+    <a
+      href="#main"
+      class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-full focus:bg-ink focus:px-4 focus:py-2 focus:text-bg"
+    >
+      Skip to content
+    </a>
+    <slot />
+    <script is:inline>
+      (function () {
+        var arm = function () {
+          document.documentElement.classList.add('smooth');
+          ['pointerdown', 'keydown', 'touchstart'].forEach(function (t) {
+            removeEventListener(t, arm);
+          });
+        };
+        ['pointerdown', 'keydown', 'touchstart'].forEach(function (t) {
+          addEventListener(t, arm, { passive: true });
+        });
+      })();
+    </script>
+  </body>
+</html>

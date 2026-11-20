@@ -1,0 +1,14 @@
+---
+import Base from '../layouts/Base.astro';
+import Nav from '../components/Nav.astro';
+import Footer from '../components/Footer.astro';
+---
+
+<Base title="Page not found" noindex>
+  <Nav />
+  <main id="main" class="wrap flex min-h-[60vh] flex-col items-start justify-center gap-6 py-24">
+    <h1 class="text-4xl sm:text-5xl">That page isn't here.</h1>
+    <a href="/" class="btn btn-primary">Back to the home page</a>
+  </main>
+  <Footer />
+</Base>
