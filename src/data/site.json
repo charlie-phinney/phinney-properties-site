@@ -59,7 +59,6 @@
   ],
   "aboutHeading": "About Phinney Properties",
   "aboutText": "Phinney Properties is run by Nancy Phinney, a lifelong Minnesota resident with more than 26 years in the business.\n\nWe own and manage our own rental homes in Edina, along with a vacation home in Destin, Florida that guests rate 9.8 out of 10 across more than 100 reviews.",
-  "aboutImage": "",
   "homesHeading": "Homes we look after",
   "homes": [
     {
@@ -94,8 +93,8 @@
   "rentalsHeading": "Homes for rent",
   "rentals": [],
   "contactHeading": "Get in touch",
-  "contactIntro": "Send a note to Nancy.",
-  "contactEmail": "hello@phinneyproperties.com",
+  "contactIntro": "Send Nancy a note.",
   "contactPhone": "",
+  "contactEmail": "hello@phinneyproperties.com",
   "formEndpoint": ""
 }
