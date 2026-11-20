@@ -182,7 +182,7 @@ export default defineConfig({
             type: 'object',
             name: 'homes',
             label: 'Photos of your homes',
-            description: 'One professional photo per home, showing the outside. The section appears once there is at least one photo.',
+            description: 'One professional photo per home, showing the outside. Add every home you look after, or leave this section off. To show it, also switch on "Photos of your homes" in Sections above.',
             list: true,
             ui: { itemProps: (i: any) => ({ label: i?.caption || 'New photo' }) },
             fields: [
