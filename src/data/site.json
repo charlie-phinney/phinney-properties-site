@@ -22,11 +22,11 @@
     },
     {
       "id": "process",
-      "show": true
+      "show": false
     },
     {
       "id": "area",
-      "show": true
+      "show": false
     },
     {
       "id": "rentals",
@@ -38,27 +38,27 @@
     }
   ],
   "brand": "Phinney Properties",
-  "heroHeadline": "Property management that feels personal.",
-  "heroSub": "Phinney Properties looks after rental homes across the Twin Cities, with personalized service and competitive rates.",
+  "heroHeadline": "Personalized property management in the Twin Cities.",
+  "heroSub": "Phinney Properties looks after rental homes in Edina, with personalized service and competitive rates.",
   "heroButton": "Get in touch",
   "heroImage": "/images/edina-ewing.jpg",
   "heroImageAlt": "A gray single-story home in Edina with a stone chimney and a front garden",
   "why": [
     {
       "title": "Personalized service",
-      "text": "You work with one person who knows your property and picks up the phone."
+      "text": "You work directly with the owner, Nancy Phinney."
     },
     {
       "title": "Competitive rates",
-      "text": "Clear pricing that makes sense for your rental, with no surprises."
+      "text": "Ask for a quote for your rental."
     },
     {
       "title": "26+ years in the business",
-      "text": "A lifelong Minnesota resident who knows these neighborhoods."
+      "text": "A lifelong Minnesota resident."
     }
   ],
-  "aboutHeading": "A local owner looking after local homes",
-  "aboutText": "Phinney Properties is run by Nancy Phinney, a lifelong Minnesota resident with more than 26 years in the business.\n\nWe own and manage our own rental homes in Edina, along with a vacation home in Destin, Florida that guests rate 9.8 out of 10 across more than 100 reviews. Your rental gets the same care we give ours.",
+  "aboutHeading": "About Phinney Properties",
+  "aboutText": "Phinney Properties is run by Nancy Phinney, a lifelong Minnesota resident with more than 26 years in the business.\n\nWe own and manage our own rental homes in Edina, along with a vacation home in Destin, Florida that guests rate 9.8 out of 10 across more than 100 reviews.",
   "aboutImage": "",
   "homesHeading": "Homes we look after",
   "homes": [
@@ -71,51 +71,30 @@
       "caption": "Destin, Florida"
     }
   ],
-  "servicesHeading": "What we take care of",
+  "servicesHeading": "Services",
   "services": [
     {
-      "title": "Finding good tenants",
-      "text": "Listing, showings, screening and the lease."
+      "title": "Finding and screening tenants",
+      "text": ""
     },
     {
       "title": "Rent collection",
-      "text": "On time, every month, with a clear record."
+      "text": ""
     },
     {
       "title": "Maintenance and repairs",
-      "text": "Trusted local trades, fair prices, fast answers."
-    },
-    {
-      "title": "Regular check-ins",
-      "text": "We keep an eye on the home so small things stay small."
-    },
-    {
-      "title": "Owner updates",
-      "text": "Plain reports, and a real person when you have a question."
+      "text": ""
     }
   ],
   "processHeading": "How it works",
-  "process": [
-    {
-      "title": "We talk",
-      "text": "Tell us about your property and what you need."
-    },
-    {
-      "title": "We make a plan",
-      "text": "You get a simple plan and a rate that fits your rental."
-    },
-    {
-      "title": "We manage it",
-      "text": "We handle the day to day and keep you in the loop."
-    }
-  ],
-  "areaHeading": "Serving the Twin Cities",
-  "areaText": "Edina\nMinneapolis\nBloomington\nRichfield\nSt. Louis Park\nHopkins\nMinnetonka\nEden Prairie",
-  "areaNote": "Somewhere else nearby? Just ask.",
+  "process": [],
+  "areaHeading": "Service area",
+  "areaText": "Edina",
+  "areaNote": "",
   "rentalsHeading": "Homes for rent",
   "rentals": [],
-  "contactHeading": "Let's talk about your property",
-  "contactIntro": "Send a note and Nancy will be in touch.",
+  "contactHeading": "Get in touch",
+  "contactIntro": "Send a note to Nancy.",
   "contactEmail": "hello@phinneyproperties.com",
   "contactPhone": "",
   "formEndpoint": ""
