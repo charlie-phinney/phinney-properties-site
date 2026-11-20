@@ -96,5 +96,5 @@
   "contactIntro": "Send a note to Nancy.",
   "contactPhone": "",
   "contactEmail": "hello@phinneyproperties.com",
-  "formEndpoint": ""
+  "formEndpoint": "https://formsubmit.co/ajax/hello@phinneyproperties.com"
 }
